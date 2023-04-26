@@ -1,0 +1,121 @@
+-- Create the database
+CREATE DATABASE office_canteen;
+
+-- Use the database
+USE office_canteen;
+
+-- Create the employees table
+CREATE TABLE employees (
+  emp_id INT PRIMARY KEY,
+  first_name VARCHAR(50),
+  last_name VARCHAR(50),
+  email VARCHAR(100),
+  department VARCHAR(50),
+  location VARCHAR(50),
+  join_date DATE
+);
+
+-- Create the items table
+CREATE TABLE items (
+  item_id INT PRIMARY KEY,
+  item_name VARCHAR(100),
+  price DECIMAL(10, 2),
+  category VARCHAR(50)
+);
+
+-- Create the orders table
+CREATE TABLE orders (
+  order_id INT PRIMARY KEY,
+  emp_id INT,
+  order_date DATE,
+  total DECIMAL(10, 2),
+  FOREIGN KEY (emp_id) REFERENCES employees(emp_id)
+);
+
+-- Create the order_items table
+CREATE TABLE order_items (
+  order_id INT,
+  item_id INT,
+  quantity INT,
+  price DECIMAL(10, 2),
+  FOREIGN KEY (order_id) REFERENCES orders(order_id),
+  FOREIGN KEY (item_id) REFERENCES items(item_id)
+);
+
+-- Insert data into the employees table
+INSERT INTO employees (emp_id, first_name, last_name, email, department, location, join_date)
+VALUES
+  (1, 'Aarav', 'Kumar', 'aarav.kumar@example.com', 'HR', 'Mumbai', '2018-01-01'),
+  (2, 'Aditi', 'Gupta', 'aditi.gupta@example.com', 'IT', 'Delhi', '2019-05-01'),
+  (3, 'Anika', 'Singh', 'anika.singh@example.com', 'Sales', 'Bangalore', '2020-02-01'),
+  (4, 'Arjun', 'Sharma', 'arjun.sharma@example.com', 'Operations', 'Chennai', '2021-01-01');
+
+-- Insert data into the items table
+INSERT INTO items (item_id, item_name, price, category)
+VALUES
+  (1, 'Samosa', 10.00, 'Snacks'),
+  (2, 'Pav Bhaji', 50.00, 'Main Course'),
+  (3, 'Paneer Tikka', 100.00, 'Starters'),
+  (4, 'Dal Makhani', 80.00, 'Main Course'),
+  (5, 'Gulab Jamun', 20.00, 'Desserts');
+
+-- Insert data into the orders table
+INSERT INTO orders (order_id, emp_id, order_date, total)
+VALUES
+  (1, 1, '2022-01-01', 30.00),
+  (2, 2, '2022-01-02', 100.00),
+  (3, 3, '2022-01-03', 140.00),
+  (4, 4, '2022-01-04', 60.00);
+
+-- Insert data into the order_items table
+INSERT INTO order_items (order_id, item_id, quantity, price)
+VALUES
+  (1, 1, 3, 10.00),
+  (2, 2, 2, 50.00),
+  (2, 3, 1, 100.00),
+  (3, 2, 3, 50.00),
+  (3, 4, 2, 80.00),
+  (4, 1, 2, 10.00);
+  
+  
+  -- Query to find the total revenue by item category
+SELECT category, SUM(quantity * price) AS total_revenue
+FROM order_items
+JOIN items ON order_items.item_id = items.item_id
+GROUP BY category;
+
+-- Query to find the top selling items by quantity
+SELECT item_name, SUM(quantity) AS total_sold
+FROM order_items
+JOIN items ON order_items.item_id = items.item_id
+GROUP BY item_name
+ORDER BY total_sold DESC
+LIMIT 3;
+
+-- Query to find the average order value
+SELECT AVG(total) AS avg_order_value
+FROM orders;
+
+-- Query to find the average time between orders for each employee
+SELECT emp_id, AVG(DATEDIFF(order_date, LAG(order_date) OVER (PARTITION BY emp_id ORDER BY order_date))) AS avg_time_between_orders
+FROM orders
+GROUP BY emp_id;
+
+-- Query to find the number of unique items purchased by each employee
+SELECT emp_id, COUNT(DISTINCT item_id) AS unique_items
+FROM order_items
+JOIN orders ON order_items.order_id = orders.order_id
+GROUP BY emp_id;
+
+-- Query to find the lifetime value of each employee
+SELECT emp_id, SUM(total) AS lifetime_value
+FROM orders
+GROUP BY emp_id;
+
+-- Query to find the top 5 employees by lifetime value
+SELECT employees.first_name, employees.last_name, SUM(orders.total) AS lifetime_value
+FROM employees
+JOIN orders ON employees.emp_id = orders.emp_id
+GROUP BY employees.emp_id
+ORDER BY lifetime_value DESC
+LIMIT 5;
