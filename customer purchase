@@ -1,0 +1,75 @@
+-- Create customers table
+CREATE TABLE customers (
+  customer_id INT PRIMARY KEY,
+  name VARCHAR(50),
+  email VARCHAR(50)
+);
+
+-- Create products table
+CREATE TABLE products (
+  product_id INT PRIMARY KEY,
+  name VARCHAR(50),
+  price DECIMAL(10,2)
+);
+
+-- Create orders table
+CREATE TABLE orders (
+  order_id INT PRIMARY KEY,
+  customer_id INT,
+  product_id INT,
+  quantity INT,
+  order_date DATE,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+  FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+-- Import or enter data into tables
+
+-- Query to find top selling products by quantity
+SELECT products.name, SUM(orders.quantity) as total_quantity
+FROM orders
+JOIN products ON orders.product_id = products.product_id
+GROUP BY products.name
+ORDER BY total_quantity DESC
+LIMIT 10;
+
+-- Query to find top selling products by revenue
+SELECT products.name, SUM(products.price * orders.quantity) as total_revenue
+FROM orders
+JOIN products ON orders.product_id = products.product_id
+GROUP BY products.name
+ORDER BY total_revenue DESC
+LIMIT 10;
+
+-- Query to find number of orders placed by each customer
+SELECT customers.name, COUNT(*) as num_orders
+FROM orders
+JOIN customers ON orders.customer_id = customers.customer_id
+GROUP BY customers.name
+ORDER BY num_orders DESC;
+
+-- Query to find the average order value
+SELECT AVG(products.price * orders.quantity) as average_order_value
+FROM orders
+JOIN products ON orders.product_id = products.product_id;
+
+-- Query to find the average time between orders for each customer
+SELECT customers.name, AVG(DATEDIFF(order_date, LAG(order_date) OVER (PARTITION BY customer_id ORDER BY order_date))) as avg_time_between_orders
+FROM orders
+JOIN customers ON orders.customer_id = customers.customer_id
+GROUP BY customers.name;
+
+-- Query to find the number of unique products purchased by each customer
+SELECT customers.name, COUNT(DISTINCT orders.product_id) as num_unique_products
+FROM orders
+JOIN customers ON orders.customer_id = customers.customer_id
+GROUP BY customers.name
+ORDER BY num_unique_products DESC;
+
+-- Query to find the lifetime value of each customer
+SELECT customers.name, SUM(products.price * orders.quantity) as lifetime_value
+FROM orders
+JOIN customers ON orders.customer_id = customers.customer_id
+JOIN products ON orders.product_id = products.product_id
+GROUP BY customers.name
+ORDER BY lifetime_value DESC;
