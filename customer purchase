@@ -1,75 +1,120 @@
--- Create customers table
+-- Create the database
+CREATE DATABASE online_retail;
+
+-- Use the database
+USE online_retail;
+
+-- Create the customers table
 CREATE TABLE customers (
   customer_id INT PRIMARY KEY,
-  name VARCHAR(50),
-  email VARCHAR(50)
+  first_name VARCHAR(50),
+  last_name VARCHAR(50),
+  email VARCHAR(100),
+  address VARCHAR(200),
+  city VARCHAR(50),
+  state VARCHAR(50),
+  postal_code VARCHAR(20)
 );
 
--- Create products table
+-- Create the products table
 CREATE TABLE products (
   product_id INT PRIMARY KEY,
-  name VARCHAR(50),
-  price DECIMAL(10,2)
+  product_name VARCHAR(100),
+  price DECIMAL(10, 2),
+  category VARCHAR(50)
 );
 
--- Create orders table
+-- Create the orders table
 CREATE TABLE orders (
   order_id INT PRIMARY KEY,
   customer_id INT,
+  order_date DATE,
+  total DECIMAL(10, 2),
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+);
+
+-- Create the order_items table
+CREATE TABLE order_items (
+  order_id INT,
   product_id INT,
   quantity INT,
-  order_date DATE,
-  FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+  price DECIMAL(10, 2),
+  FOREIGN KEY (order_id) REFERENCES orders(order_id),
   FOREIGN KEY (product_id) REFERENCES products(product_id)
 );
 
--- Import or enter data into tables
+-- Insert data into the customers table
+INSERT INTO customers (customer_id, first_name, last_name, email, address, city, state, postal_code)
+VALUES
+  (1, 'John', 'Doe', 'john.doe@example.com', '123 Main St', 'Anytown', 'CA', '12345'),
+  (2, 'Jane', 'Smith', 'jane.smith@example.com', '456 Oak Ave', 'Somewhere', 'TX', '67890'),
+  (3, 'Bob', 'Johnson', 'bob.johnson@example.com', '789 Maple St', 'Nowhere', 'NY', '54321');
 
--- Query to find top selling products by quantity
-SELECT products.name, SUM(orders.quantity) as total_quantity
-FROM orders
-JOIN products ON orders.product_id = products.product_id
-GROUP BY products.name
+-- Insert data into the products table
+INSERT INTO products (product_id, product_name, price, category)
+VALUES
+  (1, 'Widget', 9.99, 'Widgets'),
+  (2, 'Gizmo', 19.99, 'Gizmos'),
+  (3, 'Thingamabob', 14.99, 'Thingamabobs'),
+  (4, 'Whatchamacallit', 24.99, 'Whatchamacallits');
+
+-- Insert data into the orders table
+INSERT INTO orders (order_id, customer_id, order_date, total)
+VALUES
+  (1, 1, '2022-01-01', 29.97),
+  (2, 2, '2022-01-02', 39.98),
+  (3, 3, '2022-01-03', 54.97);
+
+-- Insert data into the order_items table
+INSERT INTO order_items (order_id, product_id, quantity, price)
+VALUES
+  (1, 1, 3, 9.99),
+  (2, 2, 2, 19.99),
+  (2, 3, 1, 14.99),
+  (3, 1, 2, 9.99),
+  (3, 2, 1, 19.99),
+  (3, 4, 1, 24.99);
+
+-- Query to find the top selling products by quantity
+SELECT product_name, SUM(quantity) AS total_quantity
+FROM order_items
+JOIN products ON order_items.product_id = products.product_id
+GROUP BY product_name
 ORDER BY total_quantity DESC
-LIMIT 10;
+LIMIT 3;
 
--- Query to find top selling products by revenue
-SELECT products.name, SUM(products.price * orders.quantity) as total_revenue
-FROM orders
-JOIN products ON orders.product_id = products.product_id
-GROUP BY products.name
+-- Query to find the top selling products by revenue
+SELECT product_name, SUM(quantity * price) AS total_revenue
+FROM order_items
+JOIN products ON order_items.product_id = products.product_id
+GROUP BY product_name
 ORDER BY total_revenue DESC
-LIMIT 10;
-
--- Query to find number of orders placed by each customer
-SELECT customers.name, COUNT(*) as num_orders
-FROM orders
-JOIN customers ON orders.customer_id = customers.customer_id
-GROUP BY customers.name
-ORDER BY num_orders DESC;
+LIMIT 3;
 
 -- Query to find the average order value
-SELECT AVG(products.price * orders.quantity) as average_order_value
-FROM orders
-JOIN products ON orders.product_id = products.product_id;
+SELECT AVG(total) AS avg_order_value
+FROM orders;
 
 -- Query to find the average time between orders for each customer
-SELECT customers.name, AVG(DATEDIFF(order_date, LAG(order_date) OVER (PARTITION BY customer_id ORDER BY order_date))) as avg_time_between_orders
+SELECT customer_id, AVG(DATEDIFF(order_date, LAG(order_date) OVER (PARTITION BY customer_id ORDER BY order_date))) AS avg_time_between_orders
 FROM orders
-JOIN customers ON orders.customer_id = customers.customer_id
-GROUP BY customers.name;
+GROUP BY customer_id;
 
 -- Query to find the number of unique products purchased by each customer
-SELECT customers.name, COUNT(DISTINCT orders.product_id) as num_unique_products
-FROM orders
-JOIN customers ON orders.customer_id = customers.customer_id
-GROUP BY customers.name
-ORDER BY num_unique_products DESC;
+SELECT customer_id, COUNT(DISTINCT product_id) AS unique_products
+FROM order_items
+JOIN orders ON order_items.order_id = orders.order_id
+GROUP BY customer_id;
 
 -- Query to find the lifetime value of each customer
-SELECT customers.name, SUM(products.price * orders.quantity) as lifetime_value
+SELECT customer_id, SUM(total) AS lifetime_value
 FROM orders
-JOIN customers ON orders.customer_id = customers.customer_id
-JOIN products ON orders.product_id = products.product_id
-GROUP BY customers.name
-ORDER BY lifetime_value DESC;
+GROUP BY customer_id;
+
+-- Query to find the top 5 customers by lifetime value
+SELECT customers.first_name, customers.last_name, SUM(orders.total) AS lifetime_value
+FROM customers
+JOIN orders ON customers.customer_id = orders.customer_id
+GROUP BY customers.customer_id
+ORDER BY lifetime_value DESC
+LIMIT 5;
